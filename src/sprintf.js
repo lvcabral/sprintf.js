@@ -14,7 +14,7 @@
         not_json: /[^j]/,
         text: /^[^\x25]+/,
         modulo: /^\x25{2}/,
-        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-gijostTuvxX])/,
+        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?(\+)?(0|'[^$])?(-)?(\d+|\*)?(?:\.(\d+|\*))?([b-gijostTuvxX])/,
         key: /^([a-z_][a-z_\d]*)/i,
         key_access: /^\.([a-z_][a-z_\d]*)/i,
         index_access: /^\[(\d+)\]/,
@@ -49,6 +49,14 @@
                 }
                 else if (ph.param_no) { // positional argument (explicit)
                     arg = argv[ph.param_no]
+                }
+                else if (ph.width === '*') { // asterisk replacement (width)
+                    ph.width = parseInt(argv[cursor++], 10)
+                    arg = argv[cursor++]
+                }
+                else if (ph.precision === '*') { // asterisk replacement (precision)
+                    ph.precision = parseInt(argv[cursor++], 10)
+                    arg = argv[cursor++]
                 }
                 else { // positional argument (implicit)
                     arg = argv[cursor++]
