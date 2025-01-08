@@ -117,7 +117,7 @@
                         hex = (parseInt(arg, 10) >>> 0).toString(16)
                         if (arg && arg.high) {
                             hex = (parseInt(arg.high, 10) >>> 0).toString(16) + hex.padStart(8, '0')
-                        } else  if (parseInt(arg, 10) > MAXINT - 1 || parseInt(arg, 10) < -MAXINT) {
+                        } else if (parseInt(arg, 10) > MAXINT - 1 || parseInt(arg, 10) < -MAXINT) {
                             high = BigInt.asUintN(32, BigInt(arg) >> BigInt(32)).toString(16) // eslint-disable-line
                             hex = parseInt(high, 16) !== 0 ? high + hex.padStart(8, '0') : hex
                         }
