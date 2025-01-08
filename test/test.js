@@ -94,6 +94,8 @@ describe('sprintfjs', function() {
         assert.equal('>0000', sprintf('%0-5s', '>'))
         assert.equal('>____', sprintf("%'_-5s", '>'))
         assert.equal('xxxxxx', sprintf('%5s', 'xxxxxx'))
+        assert.equal('    <', sprintf('%*s', 5, '<'))
+        assert.equal('>    ', sprintf('%-*s',5, '>'))
         assert.equal('1234', sprintf('%02u', 1234))
         assert.equal(' -10.235', sprintf('%8.3f', -10.23456))
         assert.equal('-12.34 xxx', sprintf('%f %s', -12.34, 'xxx'))
@@ -102,6 +104,7 @@ describe('sprintfjs', function() {
 
         // precision
         assert.equal('2.3', sprintf('%.1f', 2.345))
+        assert.equal('3.1416', sprintf('%.*f', 4, pi))
         assert.equal('xxxxx', sprintf('%5.5s', 'xxxxxx'))
         assert.equal('    x', sprintf('%5.1s', 'xxxxxx'))
 
