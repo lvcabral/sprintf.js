@@ -9,7 +9,7 @@ var assert = require('assert'),
 describe('sprintfjs', function() {
     var pi = 3.141592653589793
 
-    it('should return formated strings for simple placeholders', function() {
+    it('should return formatted strings for simple placeholders', function() {
         assert.equal('%', sprintf('%%'))
         assert.equal('10', sprintf('%b', 2))
         assert.equal('A', sprintf('%c', 65))
@@ -31,6 +31,7 @@ describe('sprintfjs', function() {
         assert.equal('ffffff01', sprintf('%x', -255))
         assert.equal('FF', sprintf('%X', 255))
         assert.equal('FFFFFF01', sprintf('%X', -255))
+        assert.equal('2308249009', sprintf('%X', 150460469257))
         assert.equal('Polly wants a cracker', sprintf('%2$s %3$s a %1$s', 'cracker', 'Polly', 'wants'))
         assert.equal('Hello world!', sprintf('Hello %(who)s!', {who: 'world'}))
         assert.equal('true', sprintf('%t', true))
@@ -60,7 +61,7 @@ describe('sprintfjs', function() {
         assert.equal('/<("[^"]*"|\'[^\']*\'|[^\'">])*>/', sprintf('%v', /<("[^"]*"|'[^']*'|[^'">])*>/))
     })
 
-    it('should return formated strings for complex placeholders', function() {
+    it('should return formatted strings for complex placeholders', function() {
         // sign
         assert.equal('2', sprintf('%d', 2))
         assert.equal('-2', sprintf('%d', -2))
@@ -106,7 +107,7 @@ describe('sprintfjs', function() {
 
     })
 
-    it('should return formated strings for callbacks', function() {
+    it('should return formatted strings for callbacks', function() {
         assert.equal('foobar', sprintf('%s', function() { return 'foobar' }))
     })
 })

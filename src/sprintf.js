@@ -31,7 +31,8 @@
     }
 
     function sprintf_format(parse_tree, argv) {
-        var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, sign
+        const MAXINT = 0x80000000
+        var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, sign, hex, high
         for (i = 0; i < tree_length; i++) {
             if (typeof parse_tree[i] === 'string') {
                 output += parse_tree[i]
@@ -112,10 +113,15 @@
                         arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
                         break
                     case 'x':
-                        arg = (parseInt(arg, 10) >>> 0).toString(16)
-                        break
                     case 'X':
-                        arg = (parseInt(arg, 10) >>> 0).toString(16).toUpperCase()
+                        hex = (parseInt(arg, 10) >>> 0).toString(16)
+                        if (arg && arg.high) {
+                            hex = (parseInt(arg.high, 10) >>> 0).toString(16) + hex.padStart(8, '0')
+                        } else if (parseInt(arg, 10) > MAXINT - 1 || parseInt(arg, 10) < -MAXINT) {
+                            high = BigInt.asUintN(32, BigInt(arg) >> BigInt(32)).toString(16) // eslint-disable-line
+                            hex = parseInt(high, 16) !== 0 ? high + hex.padStart(8, '0') : hex
+                        }
+                        arg = ph.type === 'X' ? hex.toUpperCase() : hex
                         break
                 }
                 if (re.json.test(ph.type)) {
