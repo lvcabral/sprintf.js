@@ -24,6 +24,7 @@ describe('sprintfjs', function() {
         assert.equal('4294967294', sprintf('%u', -2))
         assert.equal('2.200000', sprintf('%f', 2.2))
         assert.equal('3.14159', sprintf('%g', pi))
+        assert.equal('0', sprintf('%g', 0.0))
         assert.equal('10', sprintf('%o', 8))
         assert.equal('37777777770', sprintf('%o', -8))
         assert.equal('%s', sprintf('%s', '%s'))

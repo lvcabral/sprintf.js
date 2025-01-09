@@ -105,11 +105,12 @@
                         break
                     case 'g':
                         f = parseFloat(arg)
-                        if ( Math.abs( f ) < 0.0001 ) {
+                        if (f === 0) {
+                            arg = '0'
+                        }
+                        else if (Math.abs(f) < 0.0001) {
                             digits = ph.precision ? ph.precision : DEF_PRECISION
-                            if (digits > 0) {
-                                digits -= 1
-                            }
+                            digits = digits > 0 ? digits - 1 : 0
                             arg = f.toExponential(digits)
                         }
                         else if (ph.precision && ph.precision < 1) {
@@ -121,9 +122,9 @@
                         else {
                             arg = f.toPrecision(DEF_PRECISION)
                         }
-                        arg = arg.replace( re.zero_before_exp, '$1e' )
-                        arg = arg.replace( re.period_zero_exp, 'e' )
-                        arg = arg.replace( re.trailing_zeroes, '$1' )
+                        arg = arg.replace(re.zero_before_exp, '$1e')
+                        arg = arg.replace(re.period_zero_exp, 'e')
+                        arg = arg.replace(re.trailing_zeroes, '$1')
                         break
                     case 'o':
                         arg = (parseInt(arg, 10) >>> 0).toString(8)
@@ -160,9 +161,9 @@
                         break
                 }
                 if (ph.type === 'e' || ph.type === 'g') {
-                    arg = arg.replace( re.exp_pos_digits, 'e+$1' )
-                    arg = arg.replace( re.exp_neg_digits, 'e-$1' )
-                    arg = arg.replace( re.exp_trailing, 'e$10$2' )
+                    arg = arg.replace(re.exp_pos_digits, 'e+$1')
+                    arg = arg.replace(re.exp_neg_digits, 'e-$1')
+                    arg = arg.replace(re.exp_trailing, 'e$10$2')
                 }
                 if (re.json.test(ph.type)) {
                     output += arg
