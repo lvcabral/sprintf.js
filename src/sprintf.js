@@ -18,7 +18,14 @@
         key: /^([a-z_][a-z_\d]*)/i,
         key_access: /^\.([a-z_][a-z_\d]*)/i,
         index_access: /^\[(\d+)\]/,
-        sign: /^[+-]/
+        sign: /^[+-]/,
+        trailing_period_zero: /\.0$/,
+        trailing_zeroes: /(\.\d*?[1-9])0+$|\.0+$/,
+        period_zero_exp: /\.0*e/,
+        zero_before_exp: /(\..*[^0])0*e/,
+        exp_pos_digits: /e\+(\d)$/,
+        exp_neg_digits: /e-(\d)$/,
+        exp_trailing: /e([+-])(\d)$/
     }
 
     function sprintf(key) {
@@ -32,7 +39,8 @@
 
     function sprintf_format(parse_tree, argv) {
         const MAXINT = 0x80000000
-        var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, sign, hex, high
+        const DEF_PRECISION = 6
+        var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, sign, hex, high, f, digits
         for (i = 0; i < tree_length; i++) {
             if (typeof parse_tree[i] === 'string') {
                 output += parse_tree[i]
@@ -90,13 +98,32 @@
                         arg = JSON.stringify(arg, null, ph.width ? parseInt(ph.width) : 0)
                         break
                     case 'e':
-                        arg = ph.precision ? parseFloat(arg).toExponential(ph.precision) : parseFloat(arg).toExponential()
+                        arg = ph.precision ? parseFloat(arg).toExponential(ph.precision) : parseFloat(arg).toExponential(DEF_PRECISION)
                         break
                     case 'f':
-                        arg = ph.precision ? parseFloat(arg).toFixed(ph.precision) : parseFloat(arg)
+                        arg = ph.precision ? parseFloat(arg).toFixed(ph.precision) : parseFloat(arg).toFixed(DEF_PRECISION)
                         break
                     case 'g':
-                        arg = ph.precision ? String(Number(arg.toPrecision(ph.precision))) : parseFloat(arg)
+                        f = parseFloat(arg)
+                        if ( Math.abs( f ) < 0.0001 ) {
+                            digits = ph.precision ? ph.precision : DEF_PRECISION
+                            if (digits > 0) {
+                                digits -= 1
+                            }
+                            arg = f.toExponential(digits)
+                        }
+                        else if (ph.precision && ph.precision < 1) {
+                            arg = f.toFixed(0)
+                        }
+                        else if (ph.precision) {
+                            arg = String(Number(arg.toPrecision(ph.precision)))
+                        }
+                        else {
+                            arg = f.toPrecision(DEF_PRECISION)
+                        }
+                        arg = arg.replace( re.zero_before_exp, '$1e' )
+                        arg = arg.replace( re.period_zero_exp, 'e' )
+                        arg = arg.replace( re.trailing_zeroes, '$1' )
                         break
                     case 'o':
                         arg = (parseInt(arg, 10) >>> 0).toString(8)
@@ -131,6 +158,11 @@
                         }
                         arg = ph.type === 'X' ? hex.toUpperCase() : hex
                         break
+                }
+                if (ph.type === 'e' || ph.type === 'g') {
+                    arg = arg.replace( re.exp_pos_digits, 'e+$1' )
+                    arg = arg.replace( re.exp_neg_digits, 'e-$1' )
+                    arg = arg.replace( re.exp_trailing, 'e$10$2' )
                 }
                 if (re.json.test(ph.type)) {
                     output += arg
