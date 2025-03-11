@@ -38,8 +38,8 @@
     }
 
     function sprintf_format(parse_tree, argv) {
-        const MAXINT = 0x80000000
-        const DEF_PRECISION = 6
+        var MAXINT = 0x80000000
+        var DEF_PRECISION = 6
         var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, sign, hex, high, f, digits
         for (i = 0; i < tree_length; i++) {
             if (typeof parse_tree[i] === 'string') {
