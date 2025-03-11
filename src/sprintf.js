@@ -14,11 +14,18 @@
         not_json: /[^j]/,
         text: /^[^\x25]+/,
         modulo: /^\x25{2}/,
-        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-gijostTuvxX])/,
+        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?(\+)?(0|'[^$])?(-)?(\d+|\*)?(?:\.(\d+|\*))?([b-gijostTuvxX])/,
         key: /^([a-z_][a-z_\d]*)/i,
         key_access: /^\.([a-z_][a-z_\d]*)/i,
         index_access: /^\[(\d+)\]/,
-        sign: /^[+-]/
+        sign: /^[+-]/,
+        trailing_period_zero: /\.0$/,
+        trailing_zeroes: /(\.\d*?[1-9])0+$|\.0+$/,
+        period_zero_exp: /\.0*e/,
+        zero_before_exp: /(\..*[^0])0*e/,
+        exp_pos_digits: /e\+(\d)$/,
+        exp_neg_digits: /e-(\d)$/,
+        exp_trailing: /e([+-])(\d)$/
     }
 
     function sprintf(key) {
@@ -31,7 +38,9 @@
     }
 
     function sprintf_format(parse_tree, argv) {
-        var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, sign
+        var MAXINT = 0x80000000
+        var DEF_PRECISION = 6
+        var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, sign, hex, high, f, digits
         for (i = 0; i < tree_length; i++) {
             if (typeof parse_tree[i] === 'string') {
                 output += parse_tree[i]
@@ -49,6 +58,14 @@
                 }
                 else if (ph.param_no) { // positional argument (explicit)
                     arg = argv[ph.param_no]
+                }
+                else if (ph.width === '*') { // asterisk replacement (width)
+                    ph.width = parseInt(argv[cursor++], 10)
+                    arg = argv[cursor++]
+                }
+                else if (ph.precision === '*') { // asterisk replacement (precision)
+                    ph.precision = parseInt(argv[cursor++], 10)
+                    arg = argv[cursor++]
                 }
                 else { // positional argument (implicit)
                     arg = argv[cursor++]
@@ -81,13 +98,33 @@
                         arg = JSON.stringify(arg, null, ph.width ? parseInt(ph.width) : 0)
                         break
                     case 'e':
-                        arg = ph.precision ? parseFloat(arg).toExponential(ph.precision) : parseFloat(arg).toExponential()
+                        arg = ph.precision ? parseFloat(arg).toExponential(ph.precision) : parseFloat(arg).toExponential(DEF_PRECISION)
                         break
                     case 'f':
-                        arg = ph.precision ? parseFloat(arg).toFixed(ph.precision) : parseFloat(arg)
+                        arg = ph.precision ? parseFloat(arg).toFixed(ph.precision) : parseFloat(arg).toFixed(DEF_PRECISION)
                         break
                     case 'g':
-                        arg = ph.precision ? String(Number(arg.toPrecision(ph.precision))) : parseFloat(arg)
+                        f = parseFloat(arg)
+                        if (f === 0) {
+                            arg = '0'
+                        }
+                        else if (Math.abs(f) < 0.0001) {
+                            digits = ph.precision ? ph.precision : DEF_PRECISION
+                            digits = digits > 0 ? digits - 1 : 0
+                            arg = f.toExponential(digits)
+                        }
+                        else if (ph.precision && ph.precision < 1) {
+                            arg = f.toFixed(0)
+                        }
+                        else if (ph.precision) {
+                            arg = String(Number(arg.toPrecision(ph.precision)))
+                        }
+                        else {
+                            arg = f.toPrecision(DEF_PRECISION)
+                        }
+                        arg = arg.replace(re.zero_before_exp, '$1e')
+                        arg = arg.replace(re.period_zero_exp, 'e')
+                        arg = arg.replace(re.trailing_zeroes, '$1')
                         break
                     case 'o':
                         arg = (parseInt(arg, 10) >>> 0).toString(8)
@@ -112,11 +149,21 @@
                         arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
                         break
                     case 'x':
-                        arg = (parseInt(arg, 10) >>> 0).toString(16)
-                        break
                     case 'X':
-                        arg = (parseInt(arg, 10) >>> 0).toString(16).toUpperCase()
+                        hex = (parseInt(arg, 10) >>> 0).toString(16)
+                        if (arg && arg.high) {
+                            hex = (parseInt(arg.high, 10) >>> 0).toString(16) + hex.padStart(8, '0')
+                        } else if (parseInt(arg, 10) > MAXINT - 1 || parseInt(arg, 10) < -MAXINT) {
+                            high = BigInt.asUintN(32, BigInt(arg) >> BigInt(32)).toString(16) // eslint-disable-line
+                            hex = parseInt(high, 16) !== 0 ? high + hex.padStart(8, '0') : hex
+                        }
+                        arg = ph.type === 'X' ? hex.toUpperCase() : hex
                         break
+                }
+                if (ph.type === 'e' || ph.type === 'g') {
+                    arg = arg.replace(re.exp_pos_digits, 'e+$1')
+                    arg = arg.replace(re.exp_neg_digits, 'e-$1')
+                    arg = arg.replace(re.exp_trailing, 'e$10$2')
                 }
                 if (re.json.test(ph.type)) {
                     output += arg
