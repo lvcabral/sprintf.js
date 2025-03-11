@@ -12,6 +12,7 @@ Hans Pufal
 Henry [@alograg](https://github.com/alograg)
 Johnny Shields [@johnnyshields](https://github.com/johnnyshields)
 Kamal Abdali
+Marcelo Lv Cabral [@lvcabral](https://github.com/lvcabral)
 Matt Simerson [@msimerson](https://github.com/msimerson)
 Maxime Robert [@marob](https://github.com/marob)
 MeriemKhelifi [@MeriemKhelifi](https://github.com/MeriemKhelifi)

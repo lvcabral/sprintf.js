@@ -1,27 +1,20 @@
 # sprintf-js
 
-[![Build Status][travisci-image]][travisci-url] [![NPM Version][npm-image]][npm-url] [![Dependency Status][dependencies-image]][dependencies-url] [![devDependency Status][dev-dependencies-image]][dev-dependencies-url]
-
-[travisci-image]: https://travis-ci.org/alexei/sprintf.js.svg?branch=master
-[travisci-url]: https://travis-ci.org/alexei/sprintf.js
-
-[npm-image]: https://badge.fury.io/js/sprintf-js.svg
-[npm-url]: https://badge.fury.io/js/sprintf-js
-
-[dependencies-image]: https://david-dm.org/alexei/sprintf.js.svg
-[dependencies-url]: https://david-dm.org/alexei/sprintf.js
-
-[dev-dependencies-image]: https://david-dm.org/alexei/sprintf.js/dev-status.svg
-[dev-dependencies-url]: https://david-dm.org/alexei/sprintf.js#info=devDependencies
+[![Version 0.1.0](https://img.shields.io/badge/Version-1.2.0-blue.svg)](https://github.com/lvcabral/sprintf.js/releases/tag/v1.2.0)
+[![License BSD 3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](./LICENSE)
 
 **sprintf-js** is a complete open source JavaScript `sprintf` implementation for the **browser** and **Node.js**.
 
-**Note: as of v1.1.1 you might need some polyfills for older environments. See [Support](#support) section below.**
+> This is a fork of the original [sprintf-js](https://github.com/alexei/sprintf.js) and adds support to:
+>
+> - 64bit hex formatting
+> - Asterisk (*) width and precision
+> - Floating point default precision
+> - Improved `g` formatting to be closer to `C` implementation
 
 ## Usage
 
-    var sprintf = require('sprintf-js').sprintf,
-        vsprintf = require('sprintf-js').vsprintf
+    import { sprintf, vsprintf } from "@lvcabral/sprintf";
 
     sprintf('%2$s %3$s a %1$s', 'cracker', 'Polly', 'wants')
     vsprintf('The first 4 letters of the english alphabet are: %s, %s, %s and %s', ['a', 'b', 'c', 'd'])
@@ -30,11 +23,11 @@
 
 ### NPM
 
-    npm install sprintf-js
+    npm install @lvcabral/sprintf
 
-### Bower
+### Yarm
 
-    bower install sprintf
+    yarn add @lvcabral/sprintf
 
 ## API
 
@@ -54,29 +47,30 @@ Same as `sprintf` except it takes an array of arguments, rather than a variable 
 
 The placeholders in the format string are marked by `%` and are followed by one or more of these elements, in this order:
 
-* An optional number followed by a `$` sign that selects which argument index to use for the value. If not specified, arguments will be placed in the same order as the placeholders in the input string.
-* An optional `+` sign that forces to precede the result with a plus or minus sign on numeric values. By default, only the `-` sign is used on negative numbers.
-* An optional padding specifier that says what character to use for padding (if specified). Possible values are `0` or any other character preceded by a `'` (single quote). The default is to pad with *spaces*.
-* An optional `-` sign, that causes `sprintf` to left-align the result of this placeholder. The default is to right-align the result.
-* An optional number, that says how many characters the result should have. If the value to be returned is shorter than this number, the result will be padded. When used with the `j` (JSON) type specifier, the padding length specifies the tab size used for indentation.
-* An optional precision modifier, consisting of a `.` (dot) followed by a number, that says how many digits should be displayed for floating point numbers. When used with the `g` type specifier, it specifies the number of significant digits. When used on a string, it causes the result to be truncated.
-* A type specifier that can be any of:
-    * `%` — yields a literal `%` character
-    * `b` — yields an integer as a binary number
-    * `c` — yields an integer as the character with that ASCII value
-    * `d` or `i` — yields an integer as a signed decimal number
-    * `e` — yields a float using scientific notation
-    * `u` — yields an integer as an unsigned decimal number
-    * `f` — yields a float as is; see notes on precision above
-    * `g` — yields a float as is; see notes on precision above
-    * `o` — yields an integer as an octal number
-    * `s` — yields a string as is
-    * `t` — yields `true` or `false`
-    * `T` — yields the type of the argument<sup><a href="#fn-1" name="fn-ref-1">1</a></sup>
-    * `v` — yields the primitive value of the specified argument
-    * `x` — yields an integer as a hexadecimal number (lower-case)
-    * `X` — yields an integer as a hexadecimal number (upper-case)
-    * `j` — yields a JavaScript object or array as a JSON encoded string
+- An optional number followed by a `$` sign that selects which argument index to use for the value. If not specified, arguments will be placed in the same order as the placeholders in the input string.
+- An optional `+` sign that forces to precede the result with a plus or minus sign on numeric values. By default, only the `-` sign is used on negative numbers.
+- An optional padding specifier that says what character to use for padding (if specified). Possible values are `0` or any other character preceded by a `'` (single quote). The default is to pad with *spaces*.
+- An optional `-` sign, that causes `sprintf` to left-align the result of this placeholder. The default is to right-align the result.
+- An optional number, that says how many characters the result should have. If the value to be returned is shorter than this number, the result will be padded. When used with the `j` (JSON) type specifier, the padding length specifies the tab size used for indentation.
+- An optional precision modifier, consisting of a `.` (dot) followed by a number, that says how many digits should be displayed for floating point numbers. When used with the `g` type specifier, it specifies the number of significant digits. When used on a string, it causes the result to be truncated.
+- An optional `*` (asterisk) modifier that specifies the width and precision of the field.
+- A type specifier that can be any of:
+  - `%` — yields a literal `%` character
+  - `b` — yields an integer as a binary number
+  - `c` — yields an integer as the character with that ASCII value
+  - `d` or `i` — yields an integer as a signed decimal number
+  - `e` — yields a float using scientific notation
+  - `u` — yields an integer as an unsigned decimal number
+  - `f` — yields a float as is; see notes on precision above
+  - `g` — yields a float as is; see notes on precision above
+  - `o` — yields an integer as an octal number
+  - `s` — yields a string as is
+  - `t` — yields `true` or `false`
+  - `T` — yields the type of the argument<sup><a href="#fn-1" name="fn-ref-1">1</a></sup>
+  - `v` — yields the primitive value of the specified argument
+  - `x` — yields an integer as a hexadecimal number (lower-case)
+  - `X` — yields an integer as a hexadecimal number (upper-case)
+  - `j` — yields a JavaScript object or array as a JSON encoded string
 
 ## Features
 
@@ -113,10 +107,6 @@ Note: mixing positional and named placeholders is not (yet) supported
 You can pass in a function as a dynamic value and it will be invoked (with no arguments) in order to compute the value on the fly.
 
     sprintf('Current date and time: %s', function() { return new Date().toString() })
-
-### AngularJS
-
-You can use `sprintf` and `vsprintf` (also aliased as `fmt` and `vfmt` respectively) in your AngularJS projects. See `demo/`.
 
 ## Support
 
