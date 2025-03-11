@@ -1,6 +1,7 @@
 # sprintf-js
 
 [![Version 0.1.0](https://img.shields.io/badge/Version-1.2.0-blue.svg)](https://github.com/lvcabral/sprintf.js/releases/tag/v1.2.0)
+[![NPM Version](https://img.shields.io/npm/v/%40lvcabral%2Fsprintf)](https://www.npmjs.com/package/@lvcabral/sprintf)
 [![License BSD 3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](./LICENSE)
 
 **sprintf-js** is a complete open source JavaScript `sprintf` implementation for the **browser** and **Node.js**.
