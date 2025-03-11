@@ -1,13 +1,13 @@
 {
   "name": "@lvcabral/sprintf",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "JavaScript sprintf implementation",
   "author": "Alexandru Mărășteanu <hello@alexei.ro>",
   "contributors": [
     "Marcelo Lv Cabral <marcelo@lvcabral.com> (https://lvcabral.com)"
   ],
   "main": "dist/sprintf.min.js",
-  "types": "./node_modules/@types/sprintf-js/index.d.ts",
+  "types": "../../@types/sprintf-js/index.d.ts",
   "scripts": {
     "test": "mocha test/*.js",
     "pretest": "npm run lint",
