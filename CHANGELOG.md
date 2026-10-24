@@ -1,4 +1,4 @@
-## Unreleased
+## 1.3.1
 
 * Round exact halfway values to even in `e E f F g G`, like C (`%.0f` of `2.5` is `2`)
 * `%g` and `%G` with a precision switch to exponent form by C's rule (`%.3g` of `123456.789` is `1.23e+05`)
