@@ -1,3 +1,30 @@
+## 1.3.0
+
+* Format `NaN`, infinity and `-0` like C's `printf` in the float conversions: `nan`, `-nan` (sign bit set), `inf`, `-inf` and `-0.000000`
+* Add the space flag and the `#` flag (alternate form)
+* Accept flags in any order; as in C, `-` overrides `0` (`%0-5s` now pads with spaces)
+* Add the `a`, `A`, `E`, `F` and `G` conversions
+* Publish only `dist/sprintf.min.js` and its source map
+* Upgrade the dev toolchain to ESLint 10, Mocha 12 and Gulp 5; requires Node 20.19+ for development
+* Replace Travis with GitHub Actions
+
+## 1.2.2 (2025-03-11)
+
+* Fix the `types` path to `@types/sprintf-js`
+
+## 1.2.1 (2025-03-11)
+
+* Add a `types` reference to `@types/sprintf-js`
+
+## 1.2.0 (2025-03-11)
+
+* First release of the fork as `@lvcabral/sprintf`; `main` is now `dist/sprintf.min.js`
+* Support 64-bit integers in `%x` and `%X`
+* Support `*` (asterisk) width and precision
+* Use a default precision of 6 for `%e` and `%f`
+* Improve `%g` to be closer to C, including the formatting of zero
+* Remove the AngularJS filter and `bower.json`
+
 ## 1.1.3
 
 * fix LICENSE name
