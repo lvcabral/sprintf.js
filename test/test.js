@@ -92,7 +92,7 @@ describe('sprintfjs', function() {
         assert.equal('0000<', sprintf('%05s', '<'))
         assert.equal('____<', sprintf("%'_5s", '<'))
         assert.equal('>    ', sprintf('%-5s', '>'))
-        assert.equal('>0000', sprintf('%0-5s', '>'))
+        assert.equal('>    ', sprintf('%0-5s', '>'))
         assert.equal('>____', sprintf("%'_-5s", '>'))
         assert.equal('xxxxxx', sprintf('%5s', 'xxxxxx'))
         assert.equal('    <', sprintf('%*s', 5, '<'))
@@ -141,6 +141,55 @@ describe('sprintfjs', function() {
         assert.equal('-nan', sprintf('%a', -NaN))
         assert.equal(' inf', sprintf('% g', Infinity))
         assert.equal('-0x0p+0', sprintf('%a', -0))
+    })
+
+    it('should accept flags in any order', function() {
+        assert.equal('+5', sprintf('%+ d', 5))
+        assert.equal('+5', sprintf('% +d', 5))
+        assert.equal('+5   ', sprintf('%-+5d', 5))
+        assert.equal('+5   ', sprintf('%+-5d', 5))
+        assert.equal('-0002', sprintf('%0+5d', -2))
+        assert.equal('5    ', sprintf('%0-5d', 5))
+        assert.equal('5    ', sprintf('%-05d', 5))
+        assert.equal('>____', sprintf("%-'_5s", '>'))
+        assert.equal('____+5', sprintf("%+'_6d", 5))
+        assert.equal('_____5', sprintf("%0'_6d", 5))
+        assert.equal('0xff', sprintf('%(a)#x', {a: 255}))
+        assert.equal('010', sprintf('%1$#o', 8))
+    })
+
+    it('should return formatted strings for the # flag', function() {
+        // integers get a prefix when not zero
+        assert.equal('0xff', sprintf('%#x', 255))
+        assert.equal('0XFF', sprintf('%#X', 255))
+        assert.equal('0x0000ff', sprintf('%#08x', 255))
+        assert.equal('    0xff', sprintf('%#8x', 255))
+        assert.equal('0X2308249009', sprintf('%#X', 150460469257))
+        assert.equal('010', sprintf('%#o', 8))
+        assert.equal('0b101', sprintf('%#b', 5))
+        assert.equal('0', sprintf('%#x', 0))
+        assert.equal('0', sprintf('%#o', 0))
+        assert.equal('0', sprintf('%#b', 0))
+        assert.equal('5', sprintf('%#d', 5))
+        assert.equal('ab', sprintf('%#s', 'ab'))
+
+        // floats always get a decimal point
+        assert.equal('2.', sprintf('%#.0f', 2))
+        assert.equal('2.e+00', sprintf('%#.0e', 2))
+        assert.equal('0x1.p+0', sprintf('%#.0a', 1))
+        assert.equal('0X1.P+0', sprintf('%#A', 1))
+        assert.equal('-0.', sprintf('%#.0f', -0))
+        assert.equal('nan', sprintf('%#f', NaN))
+
+        // g keeps its trailing zeros
+        assert.equal('2.00000', sprintf('%#g', 2))
+        assert.equal('0.00000', sprintf('%#g', 0))
+        assert.equal('2.', sprintf('%#.1g', 2))
+        assert.equal('3.e+02', sprintf('%#.0g', 255.5))
+        assert.equal('1.23e+05', sprintf('%#.3g', 123456.789))
+        assert.equal('1.00000e-05', sprintf('%#g', 0.00001))
+        assert.equal('3.14159', sprintf('%#G', pi))
+        assert.equal('+2.00   ', sprintf('%#-+8.2f', 2))
     })
 
     it('should return formatted strings for the space flag', function() {

@@ -18,13 +18,15 @@
         not_json: /[^j]/,
         text: /^[^\x25]+/,
         modulo: /^\x25{2}/,
-        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?([+ ])?(0|'[^$])?(-)?(\d+|\*)?(?:\.(\d+|\*))?([a-gijostuvxAEFGTX])/,
+        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?((?:[-+ 0#]|'[^$])*)(\d+|\*)?(?:\.(\d+|\*))?([a-gijostuvxAEFGTX])/,
         key: /^([a-z_][a-z_\d]*)/i,
         key_access: /^\.([a-z_][a-z_\d]*)/i,
         index_access: /^\[(\d+)\]/,
         sign: /^[+-]/,
         trailing_period_zero: /\.0$/,
         trailing_zeroes: /(\.\d*?[1-9])0+$|\.0+$/,
+        alt_prefix: /[bxX]/,
+        leading_digits: /^(-?\d+)/,
         period_zero_exp: /\.0*e/,
         zero_before_exp: /(\..*[^0])0*e/,
         exp_pos_digits: /e\+(\d)$/,
@@ -162,28 +164,33 @@
                     case 'G':
                         f = parseFloat(arg)
                         if (f === 0) {
-                            arg = '0'
+                            arg = ph.alt ? f.toPrecision(ph.precision ? Math.max(ph.precision, 1) : DEF_PRECISION) : '0'
                         }
                         else if (Math.abs(f) < 0.0001) {
                             digits = ph.precision ? ph.precision : DEF_PRECISION
                             digits = digits > 0 ? digits - 1 : 0
                             arg = f.toExponential(digits)
                         }
-                        else if (ph.precision && ph.precision < 1) {
+                        else if (ph.precision && ph.precision < 1 && !ph.alt) {
                             arg = f.toFixed(0)
                         }
                         else if (ph.precision) {
-                            arg = String(Number(arg.toPrecision(ph.precision)))
+                            arg = ph.alt ? f.toPrecision(Math.max(ph.precision, 1)) : String(Number(arg.toPrecision(ph.precision)))
                         }
                         else {
                             arg = f.toPrecision(DEF_PRECISION)
                         }
-                        arg = arg.replace(re.zero_before_exp, '$1e')
-                        arg = arg.replace(re.period_zero_exp, 'e')
-                        arg = arg.replace(re.trailing_zeroes, '$1')
+                        if (!ph.alt) { // the # flag keeps the trailing zeros
+                            arg = arg.replace(re.zero_before_exp, '$1e')
+                            arg = arg.replace(re.period_zero_exp, 'e')
+                            arg = arg.replace(re.trailing_zeroes, '$1')
+                        }
                         break
                     case 'o':
                         arg = (parseInt(arg, 10) >>> 0).toString(8)
+                        if (ph.alt && arg.charAt(0) !== '0') {
+                            arg = '0' + arg
+                        }
                         break
                     case 's':
                         arg = String(arg)
@@ -224,6 +231,9 @@
                     arg = arg.replace(re.exp_neg_digits, 'e-$1')
                     arg = arg.replace(re.exp_trailing, 'e$10$2')
                 }
+                if (ph.alt && re.float.test(ph.type) && !is_special && arg.indexOf('.') === -1) { // # always writes the decimal point
+                    arg = arg.replace(re.leading_digits, '$1.')
+                }
                 if (re.upper_float.test(ph.type)) {
                     arg = arg.toUpperCase()
                 }
@@ -241,7 +251,11 @@
                     if (re.hex_float.test(ph.type) && !is_special) { // 0 padding goes after the prefix
                         sign += ph.type === 'A' ? '0X' : '0x'
                     }
-                    pad_character = ph.pad_char ? ph.pad_char === '0' ? (is_special ? ' ' : '0') : ph.pad_char.charAt(1) : ' '
+                    else if (ph.alt && re.alt_prefix.test(ph.type) && arg !== '0') {
+                        sign += ph.type === 'X' ? '0X' : '0' + ph.type
+                    }
+                    // like C, the - flag overrides the 0 flag
+                    pad_character = ph.pad_char ? ph.pad_char === '0' ? (is_special || ph.align ? ' ' : '0') : ph.pad_char.charAt(1) : ' '
                     pad_length = ph.width - (sign + arg).length
                     pad = ph.width ? (pad_length > 0 ? pad_character.repeat(pad_length) : '') : ''
                     output += ph.align ? sign + arg + pad : (pad_character === '0' ? sign + pad + arg : pad + sign + arg)
@@ -252,6 +266,34 @@
     }
 
     var sprintf_cache = Object.create(null)
+
+    // reads C flags in any order, plus a custom padding character written as 'c
+    function parse_flags(flags, ph) {
+        for (var j = 0; j < flags.length; j++) {
+            switch (flags.charAt(j)) {
+                case '+':
+                    ph.sign = '+'
+                    break
+                case ' ':
+                    ph.sign = ph.sign || ' ' // the + flag wins
+                    break
+                case '0':
+                    ph.pad_char = ph.pad_char || '0' // a custom padding character wins
+                    break
+                case '\'':
+                    ph.pad_char = flags.substring(j, j + 2)
+                    j++
+                    break
+                case '-':
+                    ph.align = '-'
+                    break
+                case '#':
+                    ph.alt = '#'
+                    break
+            }
+        }
+        return ph
+    }
 
     function sprintf_parse(fmt) {
         if (sprintf_cache[fmt]) {
@@ -296,19 +338,14 @@
                     throw new Error('[sprintf] mixing positional and named placeholders is not (yet) supported')
                 }
 
-                parse_tree.push(
-                    {
-                        placeholder: match[0],
-                        param_no:    match[1],
-                        keys:        match[2],
-                        sign:        match[3],
-                        pad_char:    match[4],
-                        align:       match[5],
-                        width:       match[6],
-                        precision:   match[7],
-                        type:        match[8]
-                    }
-                )
+                parse_tree.push(parse_flags(match[3], {
+                    placeholder: match[0],
+                    param_no:    match[1],
+                    keys:        match[2],
+                    width:       match[4],
+                    precision:   match[5],
+                    type:        match[6]
+                }))
             }
             else {
                 throw new SyntaxError('[sprintf] unexpected placeholder')

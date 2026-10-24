@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`@lvcabral/sprintf` is a fork of [alexei/sprintf.js](https://github.com/alexei/sprintf.js), published to npm. The fork adds 64-bit hex formatting, `*` width/precision, default float precision (6) for `e`/`f`/`g`, `%g` behavior closer to C, the space flag, the `a A E F G` conversions, and C-style `nan`/`inf`/`-0` output for the float conversions. Its main consumer is [brs-engine](https://github.com/lvcabral/brs-engine), which needs output that matches C's `printf` on a Roku device. Where C libraries differ (such as `%a` for subnormals), the library follows glibc. Keep those behaviors in mind when changing formatting logic.
+`@lvcabral/sprintf` is a fork of [alexei/sprintf.js](https://github.com/alexei/sprintf.js), published to npm. The fork adds 64-bit hex formatting, `*` width/precision, default float precision (6) for `e`/`f`/`g`, `%g` behavior closer to C, the space and `#` flags, flags in any order (parsed once per format by `parse_flags`), the `a A E F G` conversions, and C-style `nan`/`inf`/`-0` output for the float conversions. Its main consumer is [brs-engine](https://github.com/lvcabral/brs-engine), which needs output that matches C's `printf` on a Roku device. Where C libraries differ (such as `%a` for subnormals), the library follows glibc. Keep those behaviors in mind when changing formatting logic.
 
 ## Commands
 

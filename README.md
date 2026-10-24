@@ -12,7 +12,7 @@
 > - Floating point default precision
 > - Improved `g` formatting to be closer to `C` implementation
 > - `NaN`, infinity and `-0` formatted like `C` (`nan`, `-nan`, `inf`, `-inf`, `-0.000000`) by the float conversions
-> - The space flag and the `a`, `A`, `E`, `F` and `G` conversions
+> - The space and `#` flags, flags in any order, and the `a`, `A`, `E`, `F` and `G` conversions
 
 ## Usage
 
@@ -47,12 +47,13 @@ Same as `sprintf` except it takes an array of arguments, rather than a variable 
 
 ## Format specification
 
-The placeholders in the format string are marked by `%` and are followed by one or more of these elements, in this order:
+The placeholders in the format string are marked by `%` and are followed by one or more of these elements, in this order (the flags — sign, padding, `-` and `#` — can come in any order between them):
 
 - An optional number followed by a `$` sign that selects which argument index to use for the value. If not specified, arguments will be placed in the same order as the placeholders in the input string.
 - An optional `+` sign that forces to precede the result with a plus or minus sign on numeric values. By default, only the `-` sign is used on negative numbers. A space instead of the `+` puts a space before non-negative numbers.
 - An optional padding specifier that says what character to use for padding (if specified). Possible values are `0` or any other character preceded by a `'` (single quote). The default is to pad with *spaces*.
-- An optional `-` sign, that causes `sprintf` to left-align the result of this placeholder. The default is to right-align the result.
+- An optional `-` sign, that causes `sprintf` to left-align the result of this placeholder. The default is to right-align the result. As in C, it overrides `0` padding.
+- An optional `#` sign for the alternate form: `0x`, `0X`, `0b` or `0` before non-zero `x`, `X`, `b` and `o` values, a decimal point always written by the float conversions, and trailing zeros kept by `g` and `G`.
 - An optional number, that says how many characters the result should have. If the value to be returned is shorter than this number, the result will be padded. When used with the `j` (JSON) type specifier, the padding length specifies the tab size used for indentation.
 - An optional precision modifier, consisting of a `.` (dot) followed by a number, that says how many digits should be displayed for floating point numbers. When used with the `g` type specifier, it specifies the number of significant digits. When used on a string, it causes the result to be truncated.
 - An optional `*` (asterisk) modifier that specifies the width and precision of the field.
