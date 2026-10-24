@@ -30,7 +30,7 @@ describe('sprintfjs', function() {
 
     it('should throw SyntaxError for placeholders', function() {
         should_throw('%', [], SyntaxError)
-        should_throw('%A', [], SyntaxError)
+        should_throw('%Q', [], SyntaxError)
         should_throw('%s%', [], SyntaxError)
         should_throw('%(s', [], SyntaxError)
         should_throw('%)s', [], SyntaxError)
@@ -39,7 +39,7 @@ describe('sprintfjs', function() {
         should_throw('%(12)s', [], SyntaxError)
     })
 
-    var numeric = 'bcdiefguxX'.split('')
+    var numeric = 'bcdiaAeEfFgGuxX'.split('')
     numeric.forEach(function(specifier) {
         var fmt = sprintf('%%%s',specifier)
         it(fmt + ' should throw TypeError for invalid numbers', function() {

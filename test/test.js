@@ -92,7 +92,7 @@ describe('sprintfjs', function() {
         assert.equal('0000<', sprintf('%05s', '<'))
         assert.equal('____<', sprintf("%'_5s", '<'))
         assert.equal('>    ', sprintf('%-5s', '>'))
-        assert.equal('>0000', sprintf('%0-5s', '>'))
+        assert.equal('>    ', sprintf('%0-5s', '>'))
         assert.equal('>____', sprintf("%'_-5s", '>'))
         assert.equal('xxxxxx', sprintf('%5s', 'xxxxxx'))
         assert.equal('    <', sprintf('%*s', 5, '<'))
@@ -109,6 +109,136 @@ describe('sprintfjs', function() {
         assert.equal('xxxxx', sprintf('%5.5s', 'xxxxxx'))
         assert.equal('    x', sprintf('%5.1s', 'xxxxxx'))
 
+    })
+
+    it('should format NaN, infinity and -0 like C printf', function() {
+        // NaN and infinity: lowercase, sign from the sign bit, precision and 0 flag ignored
+        assert.equal('nan', sprintf('%f', NaN))
+        assert.equal('nan', sprintf('%e', NaN))
+        assert.equal('nan', sprintf('%g', NaN))
+        assert.equal('-nan', sprintf('%g', -NaN))
+        assert.equal('+nan', sprintf('%+f', NaN))
+        assert.equal('  nan', sprintf('%5.2f', NaN))
+        assert.equal('  nan', sprintf('%05.2f', NaN))
+        assert.equal('-nan  ', sprintf('%-6f', -NaN))
+        assert.equal('inf', sprintf('%e', Infinity))
+        assert.equal('-inf', sprintf('%f', -Infinity))
+        assert.equal('+inf', sprintf('%+f', Infinity))
+        assert.equal('    -inf', sprintf('%08.3e', -Infinity))
+
+        // -0 keeps its sign, with 0 padding after it
+        assert.equal('-0.000000', sprintf('%f', -0))
+        assert.equal('-0.000000e+00', sprintf('%e', -0))
+        assert.equal('-0', sprintf('%g', -0))
+        assert.equal('-0.00', sprintf('%5.2f', -0))
+        assert.equal('-00.00', sprintf('%06.2f', -0))
+        assert.equal('-0.0', sprintf('%+.1f', -0))
+        assert.equal('+0.0', sprintf('%+.1f', 0))
+        assert.equal('-0.000000', sprintf('%f', '-0'))
+        assert.equal('0', sprintf('%d', -0))
+        assert.equal('NAN', sprintf('%F', NaN))
+        assert.equal('-INF', sprintf('%E', -Infinity))
+        assert.equal('-nan', sprintf('%a', -NaN))
+        assert.equal(' inf', sprintf('% g', Infinity))
+        assert.equal('-0x0p+0', sprintf('%a', -0))
+    })
+
+    it('should accept flags in any order', function() {
+        assert.equal('+5', sprintf('%+ d', 5))
+        assert.equal('+5', sprintf('% +d', 5))
+        assert.equal('+5   ', sprintf('%-+5d', 5))
+        assert.equal('+5   ', sprintf('%+-5d', 5))
+        assert.equal('-0002', sprintf('%0+5d', -2))
+        assert.equal('5    ', sprintf('%0-5d', 5))
+        assert.equal('5    ', sprintf('%-05d', 5))
+        assert.equal('>____', sprintf("%-'_5s", '>'))
+        assert.equal('____+5', sprintf("%+'_6d", 5))
+        assert.equal('_____5', sprintf("%0'_6d", 5))
+        assert.equal('0xff', sprintf('%(a)#x', {a: 255}))
+        assert.equal('010', sprintf('%1$#o', 8))
+    })
+
+    it('should return formatted strings for the # flag', function() {
+        // integers get a prefix when not zero
+        assert.equal('0xff', sprintf('%#x', 255))
+        assert.equal('0XFF', sprintf('%#X', 255))
+        assert.equal('0x0000ff', sprintf('%#08x', 255))
+        assert.equal('    0xff', sprintf('%#8x', 255))
+        assert.equal('0X2308249009', sprintf('%#X', 150460469257))
+        assert.equal('010', sprintf('%#o', 8))
+        assert.equal('0b101', sprintf('%#b', 5))
+        assert.equal('0', sprintf('%#x', 0))
+        assert.equal('0', sprintf('%#o', 0))
+        assert.equal('0', sprintf('%#b', 0))
+        assert.equal('5', sprintf('%#d', 5))
+        assert.equal('ab', sprintf('%#s', 'ab'))
+
+        // floats always get a decimal point
+        assert.equal('2.', sprintf('%#.0f', 2))
+        assert.equal('2.e+00', sprintf('%#.0e', 2))
+        assert.equal('0x1.p+0', sprintf('%#.0a', 1))
+        assert.equal('0X1.P+0', sprintf('%#A', 1))
+        assert.equal('-0.', sprintf('%#.0f', -0))
+        assert.equal('nan', sprintf('%#f', NaN))
+
+        // g keeps its trailing zeros
+        assert.equal('2.00000', sprintf('%#g', 2))
+        assert.equal('0.00000', sprintf('%#g', 0))
+        assert.equal('2.', sprintf('%#.1g', 2))
+        assert.equal('3.e+02', sprintf('%#.0g', 255.5))
+        assert.equal('1.23e+05', sprintf('%#.3g', 123456.789))
+        assert.equal('1.00000e-05', sprintf('%#g', 0.00001))
+        assert.equal('3.14159', sprintf('%#G', pi))
+        assert.equal('+2.00   ', sprintf('%#-+8.2f', 2))
+    })
+
+    it('should return formatted strings for the space flag', function() {
+        assert.equal(' 5', sprintf('% d', 5))
+        assert.equal('-5', sprintf('% d', -5))
+        assert.equal(' 0005', sprintf('% 05d', 5))
+        assert.equal(' 2.500000', sprintf('% f', 2.5))
+        assert.equal(' 0x1p+1', sprintf('% a', 2))
+        assert.equal('5', sprintf('% u', 5))
+        assert.equal('ff', sprintf('% x', 255))
+        assert.equal('a', sprintf('% s', 'a'))
+    })
+
+    it('should return formatted strings for uppercase float conversions', function() {
+        assert.equal('2.500000E+00', sprintf('%E', 2.5))
+        assert.equal('-1.23E-04', sprintf('%.2E', -0.000123))
+        assert.equal('2.500000', sprintf('%F', 2.5))
+        assert.equal('3.14159', sprintf('%G', pi))
+        assert.equal('1E-05', sprintf('%G', 0.00001))
+    })
+
+    it('should return formatted strings for hexadecimal floats', function() {
+        assert.equal('0x0p+0', sprintf('%a', 0))
+        assert.equal('0x1p+0', sprintf('%a', 1))
+        assert.equal('-0x1p+0', sprintf('%a', -1))
+        assert.equal('0x1p-1', sprintf('%a', 0.5))
+        assert.equal('0x1.ffp+7', sprintf('%a', 255.5))
+        assert.equal('0x1.921fb54442d18p+1', sprintf('%a', pi))
+        assert.equal('0x1.999999999999ap-4', sprintf('%a', 0.1))
+        assert.equal('0x1.fffffffffffffp+1023', sprintf('%a', Number.MAX_VALUE))
+        assert.equal('0X1.FFP+7', sprintf('%A', 255.5))
+
+        // precision rounds half to even, without renormalizing a carry into the leading digit
+        assert.equal('0x1.000p+0', sprintf('%.3a', 1))
+        assert.equal('0x1.92p+1', sprintf('%.2a', pi))
+        assert.equal('0x2.0p+0', sprintf('%.1a', 1.99))
+        assert.equal('0x2p+0', sprintf('%.0a', 1.5))
+        assert.equal('0x1p+1', sprintf('%.0a', 2.5))
+        assert.equal('0x1.921fb54442d1800p+1', sprintf('%.15a', pi))
+
+        // subnormals keep a leading 0, as in glibc
+        assert.equal('0x0.0000000000001p-1022', sprintf('%a', Number.MIN_VALUE))
+
+        // flags, width and 0 padding after the prefix
+        assert.equal('+0x1p+0', sprintf('%+a', 1))
+        assert.equal('0x0001p+0', sprintf('%09a', 1))
+        assert.equal('-0x001p+0', sprintf('%09a', -1))
+        assert.equal('   0x1p+0', sprintf('%9a', 1))
+        assert.equal('0x1p+0   ', sprintf('%-9a', 1))
     })
 
     it('should return formatted strings for callbacks', function() {
