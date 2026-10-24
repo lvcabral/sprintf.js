@@ -1,11 +1,11 @@
-## 1.3.1
+## 1.3.1 (2026-10-24)
 
 * Round exact halfway values to even in `e E f F g G`, like C (`%.0f` of `2.5` is `2`)
 * `%g` and `%G` with a precision switch to exponent form by C's rule (`%.3g` of `123456.789` is `1.23e+05`)
 * `%f` and `%F` write values of `1e21` and up in full instead of in exponent form
 * A precision of `0` given through `*` is no longer treated as the default precision in `e E f F g G`
 
-## 1.3.0
+## 1.3.0 (2026-10-24)
 
 * Format `NaN`, infinity and `-0` like C's `printf` in the float conversions: `nan`, `-nan` (sign bit set), `inf`, `-inf` and `-0.000000`
 * Add the space flag and the `#` flag (alternate form)
