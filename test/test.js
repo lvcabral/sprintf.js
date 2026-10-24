@@ -143,6 +143,44 @@ describe('sprintfjs', function() {
         assert.equal('-0x0p+0', sprintf('%a', -0))
     })
 
+    it('should round and choose notation like C printf', function() {
+        // exact ties round to even; other values round to nearest
+        assert.equal('2', sprintf('%.0f', 2.5))
+        assert.equal('0', sprintf('%.0f', 0.5))
+        assert.equal('4', sprintf('%.0f', 3.5))
+        assert.equal('-2', sprintf('%.0f', -2.5))
+        assert.equal('  2.2', sprintf('%5.1f', 2.25))
+        assert.equal('0.12', sprintf('%.2f', 0.125))
+        assert.equal('0.38', sprintf('%.2f', 0.375))
+        assert.equal('2.67', sprintf('%.2f', 2.675))
+        assert.equal('0.1', sprintf('%.1f', 0.05))
+        assert.equal('2e+00', sprintf('%.0e', 2.5))
+        assert.equal('1e+01', sprintf('%.0e', 9.5))
+        assert.equal('2e+01', sprintf('%.0e', 25))
+        assert.equal('1.2e+00', sprintf('%.1e', 1.25))
+        assert.equal('0.12', sprintf('%.2g', 0.125))
+        assert.equal('2', sprintf('%.1g', 2.5))
+        assert.equal('2.', sprintf('%#.0f', 2.5))
+
+        // %g switches to exponent form when the exponent is below -4 or at least the precision
+        assert.equal('1.23e+05', sprintf('%.3g', 123456.789))
+        assert.equal('1e+02', sprintf('%.2g', 100))
+        assert.equal('100', sprintf('%.3g', 100))
+        assert.equal('100000', sprintf('%g', 100000))
+        assert.equal('1e+06', sprintf('%g', 1000000))
+        assert.equal('0.0001', sprintf('%g', 0.0001))
+        assert.equal('1.234e-05', sprintf('%g', 0.00001234))
+        assert.equal('1E+10', sprintf('%G', 1e10))
+        assert.equal('1.20e+05', sprintf('%#.3g', 120000))
+
+        // %f writes large values in full
+        assert.equal('1000000000000000000000.000000', sprintf('%f', 1e21))
+        assert.equal('1000000000000000052504760255204420248704468581108159154915854115511802457988908195786371375080447864043704443832883878176942523235360430575644792184786706982848387200926575803737830233794788090059368953234970799945081119038967640880074652742780142494579258788820056842838115669472196386865459400540160.000000', sprintf('%f', 1e300))
+        assert.equal('179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368', sprintf('%.0f', Number.MAX_VALUE))
+        assert.equal('4.940656e-324', sprintf('%e', Number.MIN_VALUE))
+        assert.equal('0.000000', sprintf('%f', Number.MIN_VALUE))
+    })
+
     it('should accept flags in any order', function() {
         assert.equal('+5', sprintf('%+ d', 5))
         assert.equal('+5', sprintf('% +d', 5))
