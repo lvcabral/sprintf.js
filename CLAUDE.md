@@ -25,6 +25,7 @@ All library code lives in one file, `src/sprintf.js`, an IIFE that exports `spri
 
 - `sprintf_parse(fmt)` tokenizes a format string into a parse tree: literal strings plus placeholder objects (`param_no`, `keys`, `sign`, `pad_char`, `align`, `width`, `precision`, `type`) built from the `re.placeholder` regex. Results are memoized in `sprintf_cache`, keyed by the format string.
 - `sprintf_format(parse_tree, argv)` walks the tree, resolves each argument (named keys with `.`/`[n]` access, explicit `n$` positions, `*` width/precision consumed from `argv`, or implicit cursor order), calls function arguments to compute values, converts by type in a `switch`, then applies sign and padding.
+- `format_float` writes `e`/`f`/`g` exactly like C. `toFixed`/`toExponential` are used when they are exact; exact ties (`is_tie`), which JavaScript rounds up but C rounds to even, and `%f` of values from `1e21` take a slower `BigInt` path (`exact_decimal`, `round_half_even`). `hex_float` writes `a`/`A`.
 - `vsprintf` just spreads an array into `sprintf`.
 - Mixing named and positional placeholders throws (tracked through the `arg_names` bitmask).
 

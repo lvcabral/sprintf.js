@@ -11,7 +11,6 @@
         number: /[diaAeEfFgG]/,
         float: /[aAeEfFgG]/,
         hex_float: /[aA]/,
-        exponent: /[eEgG]/,
         upper_float: /[AEFG]/,
         numeric_arg: /[bcdiaAeEfFgGuxX]/,
         json: /[j]/,
@@ -23,15 +22,9 @@
         key_access: /^\.([a-z_][a-z_\d]*)/i,
         index_access: /^\[(\d+)\]/,
         sign: /^[+-]/,
-        trailing_period_zero: /\.0$/,
-        trailing_zeroes: /(\.\d*?[1-9])0+$|\.0+$/,
+        trailing_zeroes: /\.?0+$/,
         alt_prefix: /[bxX]/,
-        leading_digits: /^(-?\d+)/,
-        period_zero_exp: /\.0*e/,
-        zero_before_exp: /(\..*[^0])0*e/,
-        exp_pos_digits: /e\+(\d)$/,
-        exp_neg_digits: /e-(\d)$/,
-        exp_trailing: /e([+-])(\d)$/
+        leading_digits: /^(-?\d+)/
     }
 
     function sprintf(key) {
@@ -81,10 +74,118 @@
         return lead + (digits ? '.' + digits : '') + 'p' + (exponent < 0 ? '-' : '+') + Math.abs(exponent)
     }
 
+    function pow10(n) {
+        return BigInt('1' + '0'.repeat(n))
+    }
+
+    // the exact value of a finite, non-negative double as [digits, scale], where value = digits / 10^scale
+    function exact_decimal(value) {
+        var high, exponent, significand
+        float_view.setFloat64(0, value)
+        high = float_view.getUint32(0)
+        exponent = (high >>> 20) & 0x7ff
+        significand = BigInt((high & 0xfffff) * 0x100000000 + float_view.getUint32(4))
+        if (exponent === 0) { // zero or subnormal
+            exponent = 1
+        }
+        else {
+            significand += BigInt(0x10000000000000) // the implicit leading 1
+        }
+        exponent -= 1075 // value = significand * 2^exponent
+        if (exponent >= 0) {
+            return [significand << BigInt(exponent), 0]
+        }
+        return [significand * (pow10(-exponent) >> BigInt(-exponent)), -exponent] // 2^-n = 5^n / 10^n
+    }
+
+    // digits / 10^shift, rounding exact ties to even like C
+    function round_half_even(digits, shift) {
+        if (shift <= 0) {
+            return digits * pow10(-shift)
+        }
+        var divisor = pow10(shift), quotient = digits / divisor, twice = digits % divisor * BigInt(2)
+        if (twice > divisor || (twice === divisor && quotient % BigInt(2) === BigInt(1))) {
+            quotient += BigInt(1)
+        }
+        return quotient
+    }
+
+    // true when value lies exactly halfway between two numbers with `places` decimals: only then do toFixed and
+    // toExponential, which pick the larger one, differ from C, which picks the even one
+    function is_tie(value, places) {
+        return places >= 0 && places < 1000 && Number.isInteger(value * Math.pow(2, places + 1)) && !Number.isInteger(value * Math.pow(2, places))
+    }
+
+    // C's %f, with every integer digit of large values
+    function fixed_point(value, precision) {
+        var exact, digits
+        if (value < 1e21 && precision <= 100 && !is_tie(value, precision)) { // toFixed is exact here
+            return value.toFixed(precision)
+        }
+        exact = exact_decimal(value)
+        digits = round_half_even(exact[0], exact[1] - precision).toString()
+        if (precision === 0) {
+            return digits
+        }
+        digits = digits.padStart(precision + 1, '0')
+        return digits.slice(0, -precision) + '.' + digits.slice(-precision)
+    }
+
+    // the significant digits and decimal exponent of C's %e
+    function scientific(value, precision) {
+        var exact, length, digits, exponent
+        if (value === 0) {
+            return ['0'.repeat(precision + 1), 0]
+        }
+        if (precision <= 100 && (!Number.isInteger(value) || value < Math.pow(10, precision + 1))) {
+            // toExponential is exact unless there is a tie; a carry (9.99 to 1.00e+1) lowers the real exponent by one
+            digits = value.toExponential(precision).split('e')
+            exponent = parseInt(digits[1], 10)
+            if (!is_tie(value, precision - exponent) && !is_tie(value, precision - exponent + 1)) {
+                return [digits[0].replace('.', ''), exponent]
+            }
+        }
+        exact = exact_decimal(value)
+        length = exact[0].toString().length
+        digits = round_half_even(exact[0], length - precision - 1).toString()
+        if (digits.length > precision + 1) { // rounding carried into a new digit, like 9.99 to 10.0
+            return [digits.slice(0, -1), length - exact[1]]
+        }
+        return [digits, length - 1 - exact[1]]
+    }
+
+    function exponential(digits, exponent) {
+        var mantissa = digits.length > 1 ? digits.charAt(0) + '.' + digits.slice(1) : digits
+        return mantissa + 'e' + (exponent < 0 ? '-' : '+') + (Math.abs(exponent) < 10 ? '0' : '') + Math.abs(exponent)
+    }
+
+    // C's %e, %f and %g of a finite, non-negative value
+    function format_float(value, type, precision, alt) {
+        var parts, significant
+        if (type === 'f') {
+            return fixed_point(value, precision)
+        }
+        if (type === 'e') {
+            parts = scientific(value, precision)
+            return exponential(parts[0], parts[1])
+        }
+        // %g: fixed form when -4 <= exponent < precision, then no trailing zeros unless the # flag is set
+        significant = precision || 1
+        parts = scientific(value, significant - 1)
+        if (parts[1] >= -4 && parts[1] < significant) {
+            value = fixed_point(value, significant - 1 - parts[1])
+            return alt || value.indexOf('.') === -1 ? value : value.replace(re.trailing_zeroes, '')
+        }
+        if (!alt) {
+            parts[0] = parts[0].replace(/0+$/, '') || '0'
+        }
+        return exponential(parts[0], parts[1])
+    }
+
     function sprintf_format(parse_tree, argv) {
         var MAXINT = 0x80000000
         var DEF_PRECISION = 6
-        var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, is_special, sign, hex, high, f, digits
+        var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, is_special, sign, hex, high, f
         for (i = 0; i < tree_length; i++) {
             if (typeof parse_tree[i] === 'string') {
                 output += parse_tree[i]
@@ -154,36 +255,12 @@
                         break
                     case 'e':
                     case 'E':
-                        arg = ph.precision ? parseFloat(arg).toExponential(ph.precision) : parseFloat(arg).toExponential(DEF_PRECISION)
-                        break
                     case 'f':
                     case 'F':
-                        arg = ph.precision ? parseFloat(arg).toFixed(ph.precision) : parseFloat(arg).toFixed(DEF_PRECISION)
-                        break
                     case 'g':
                     case 'G':
-                        f = parseFloat(arg)
-                        if (f === 0) {
-                            arg = ph.alt ? f.toPrecision(ph.precision ? Math.max(ph.precision, 1) : DEF_PRECISION) : '0'
-                        }
-                        else if (Math.abs(f) < 0.0001) {
-                            digits = ph.precision ? ph.precision : DEF_PRECISION
-                            digits = digits > 0 ? digits - 1 : 0
-                            arg = f.toExponential(digits)
-                        }
-                        else if (ph.precision && ph.precision < 1 && !ph.alt) {
-                            arg = f.toFixed(0)
-                        }
-                        else if (ph.precision) {
-                            arg = ph.alt ? f.toPrecision(Math.max(ph.precision, 1)) : String(Number(arg.toPrecision(ph.precision)))
-                        }
-                        else {
-                            arg = f.toPrecision(DEF_PRECISION)
-                        }
-                        if (!ph.alt) { // the # flag keeps the trailing zeros
-                            arg = arg.replace(re.zero_before_exp, '$1e')
-                            arg = arg.replace(re.period_zero_exp, 'e')
-                            arg = arg.replace(re.trailing_zeroes, '$1')
+                        if (!is_special) { // a negative or missing precision means the default, as in C
+                            arg = format_float(Math.abs(f), ph.type.toLowerCase(), ph.precision >= 0 ? parseInt(ph.precision, 10) : DEF_PRECISION, ph.alt)
                         }
                         break
                     case 'o':
@@ -225,11 +302,6 @@
                 }
                 if (is_special) { // the precision does not apply
                     arg = isNaN(f) ? 'nan' : 'inf'
-                }
-                else if (re.exponent.test(ph.type)) {
-                    arg = arg.replace(re.exp_pos_digits, 'e+$1')
-                    arg = arg.replace(re.exp_neg_digits, 'e-$1')
-                    arg = arg.replace(re.exp_trailing, 'e$10$2')
                 }
                 if (ph.alt && re.float.test(ph.type) && !is_special && arg.indexOf('.') === -1) { // # always writes the decimal point
                     arg = arg.replace(re.leading_digits, '$1.')
