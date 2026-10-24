@@ -1,4 +1,4 @@
-/* global window, exports, define */
+/* global window, define */
 
 !function() {
     'use strict'
@@ -154,7 +154,7 @@
                         if (arg && arg.high) {
                             hex = (parseInt(arg.high, 10) >>> 0).toString(16) + hex.padStart(8, '0')
                         } else if (parseInt(arg, 10) > MAXINT - 1 || parseInt(arg, 10) < -MAXINT) {
-                            high = BigInt.asUintN(32, BigInt(arg) >> BigInt(32)).toString(16) // eslint-disable-line
+                            high = BigInt.asUintN(32, BigInt(arg) >> BigInt(32)).toString(16)
                             hex = parseInt(high, 16) !== 0 ? high + hex.padStart(8, '0') : hex
                         }
                         arg = ph.type === 'X' ? hex.toUpperCase() : hex
@@ -204,7 +204,7 @@
             else if ((match = re.placeholder.exec(_fmt)) !== null) {
                 if (match[2]) {
                     arg_names |= 1
-                    var field_list = [], replacement_field = match[2], field_match = []
+                    var field_list = [], replacement_field = match[2], field_match
                     if ((field_match = re.key.exec(replacement_field)) !== null) {
                         field_list.push(field_match[1])
                         while ((replacement_field = replacement_field.substring(field_match[0].length)) !== '') {

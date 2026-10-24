@@ -21,3 +21,11 @@ suite
     })
 
 module.exports = suite
+
+if (require.main === module) {
+    suite
+        .on('cycle', function(event) {
+            console.log(String(event.target))
+        })
+        .run()
+}
