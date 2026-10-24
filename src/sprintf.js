@@ -8,13 +8,17 @@
         not_bool: /[^t]/,
         not_type: /[^T]/,
         not_primitive: /[^v]/,
-        number: /[diefg]/,
-        numeric_arg: /[bcdiefguxX]/,
+        number: /[diaAeEfFgG]/,
+        float: /[aAeEfFgG]/,
+        hex_float: /[aA]/,
+        exponent: /[eEgG]/,
+        upper_float: /[AEFG]/,
+        numeric_arg: /[bcdiaAeEfFgGuxX]/,
         json: /[j]/,
         not_json: /[^j]/,
         text: /^[^\x25]+/,
         modulo: /^\x25{2}/,
-        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?(\+)?(0|'[^$])?(-)?(\d+|\*)?(?:\.(\d+|\*))?([b-gijostTuvxX])/,
+        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?([+ ])?(0|'[^$])?(-)?(\d+|\*)?(?:\.(\d+|\*))?([a-gijostuvxAEFGTX])/,
         key: /^([a-z_][a-z_\d]*)/i,
         key_access: /^\.([a-z_][a-z_\d]*)/i,
         index_access: /^\[(\d+)\]/,
@@ -37,10 +41,48 @@
         return sprintf.apply(null, [fmt].concat(argv || []))
     }
 
+    var float_view = new DataView(new ArrayBuffer(8))
+
+    // true when the sign bit is set, which also tells -0 and -NaN apart
+    function has_sign_bit(value) {
+        float_view.setFloat64(0, value)
+        return (float_view.getUint8(0) & 0x80) !== 0
+    }
+
+    // C's %a without the sign and 0x prefix: a hexadecimal significand and a binary exponent, like 1.8p+1.
+    // As in glibc, subnormals keep a leading 0 and rounding up to 2 is not renormalized.
+    function hex_float(value, precision) {
+        var high, exponent, significand, scale, rounded, remainder, lead, digits
+        float_view.setFloat64(0, value)
+        high = float_view.getUint32(0)
+        exponent = (high >>> 20) & 0x7ff
+        significand = (high & 0xfffff) * 0x100000000 + float_view.getUint32(4) // 52 bits, exact in a double
+        if (exponent === 0) { // zero or subnormal
+            exponent = significand ? -1022 : 0
+        }
+        else {
+            significand += 0x10000000000000 // the implicit leading 1
+            exponent -= 1023
+        }
+        if (precision !== undefined && precision < 13) { // round half to even
+            scale = Math.pow(16, 13 - precision)
+            rounded = Math.floor(significand / scale)
+            remainder = significand - rounded * scale
+            if (remainder > scale / 2 || (remainder === scale / 2 && rounded % 2)) {
+                rounded++
+            }
+            significand = rounded * scale
+        }
+        lead = Math.floor(significand / 0x10000000000000)
+        digits = (significand - lead * 0x10000000000000).toString(16).padStart(13, '0')
+        digits = precision === undefined ? digits.replace(/0+$/, '') : digits.substring(0, precision) + '0'.repeat(Math.max(precision - 13, 0))
+        return lead + (digits ? '.' + digits : '') + 'p' + (exponent < 0 ? '-' : '+') + Math.abs(exponent)
+    }
+
     function sprintf_format(parse_tree, argv) {
         var MAXINT = 0x80000000
         var DEF_PRECISION = 6
-        var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, sign, hex, high, f, digits
+        var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, is_special, sign, hex, high, f, digits
         for (i = 0; i < tree_length; i++) {
             if (typeof parse_tree[i] === 'string') {
                 output += parse_tree[i]
@@ -79,7 +121,14 @@
                     throw new TypeError(sprintf('[sprintf] expecting number but found %T', arg))
                 }
 
-                if (re.number.test(ph.type)) {
+                is_special = false
+                if (re.float.test(ph.type)) {
+                    // like C printf: -0 keeps its sign, NaN and infinity print as nan and inf
+                    f = typeof arg === 'number' ? arg : parseFloat(arg)
+                    is_positive = !has_sign_bit(f)
+                    is_special = !isFinite(f)
+                }
+                else if (re.number.test(ph.type)) {
                     is_positive = arg >= 0
                 }
 
@@ -97,13 +146,20 @@
                     case 'j':
                         arg = JSON.stringify(arg, null, ph.width ? parseInt(ph.width) : 0)
                         break
+                    case 'a':
+                    case 'A':
+                        arg = hex_float(f, ph.precision !== undefined ? parseInt(ph.precision, 10) : undefined)
+                        break
                     case 'e':
+                    case 'E':
                         arg = ph.precision ? parseFloat(arg).toExponential(ph.precision) : parseFloat(arg).toExponential(DEF_PRECISION)
                         break
                     case 'f':
+                    case 'F':
                         arg = ph.precision ? parseFloat(arg).toFixed(ph.precision) : parseFloat(arg).toFixed(DEF_PRECISION)
                         break
                     case 'g':
+                    case 'G':
                         f = parseFloat(arg)
                         if (f === 0) {
                             arg = '0'
@@ -160,23 +216,32 @@
                         arg = ph.type === 'X' ? hex.toUpperCase() : hex
                         break
                 }
-                if (ph.type === 'e' || ph.type === 'g') {
+                if (is_special) { // the precision does not apply
+                    arg = isNaN(f) ? 'nan' : 'inf'
+                }
+                else if (re.exponent.test(ph.type)) {
                     arg = arg.replace(re.exp_pos_digits, 'e+$1')
                     arg = arg.replace(re.exp_neg_digits, 'e-$1')
                     arg = arg.replace(re.exp_trailing, 'e$10$2')
+                }
+                if (re.upper_float.test(ph.type)) {
+                    arg = arg.toUpperCase()
                 }
                 if (re.json.test(ph.type)) {
                     output += arg
                 }
                 else {
                     if (re.number.test(ph.type) && (!is_positive || ph.sign)) {
-                        sign = is_positive ? '+' : '-'
+                        sign = is_positive ? ph.sign : '-' // the + flag or the space flag
                         arg = arg.toString().replace(re.sign, '')
                     }
                     else {
                         sign = ''
                     }
-                    pad_character = ph.pad_char ? ph.pad_char === '0' ? '0' : ph.pad_char.charAt(1) : ' '
+                    if (re.hex_float.test(ph.type) && !is_special) { // 0 padding goes after the prefix
+                        sign += ph.type === 'A' ? '0X' : '0x'
+                    }
+                    pad_character = ph.pad_char ? ph.pad_char === '0' ? (is_special ? ' ' : '0') : ph.pad_char.charAt(1) : ' '
                     pad_length = ph.width - (sign + arg).length
                     pad = ph.width ? (pad_length > 0 ? pad_character.repeat(pad_length) : '') : ''
                     output += ph.align ? sign + arg + pad : (pad_character === '0' ? sign + pad + arg : pad + sign + arg)

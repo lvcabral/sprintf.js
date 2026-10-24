@@ -11,6 +11,8 @@
 > - Asterisk (*) width and precision
 > - Floating point default precision
 > - Improved `g` formatting to be closer to `C` implementation
+> - `NaN`, infinity and `-0` formatted like `C` (`nan`, `-nan`, `inf`, `-inf`, `-0.000000`) by the float conversions
+> - The space flag and the `a`, `A`, `E`, `F` and `G` conversions
 
 ## Usage
 
@@ -48,7 +50,7 @@ Same as `sprintf` except it takes an array of arguments, rather than a variable 
 The placeholders in the format string are marked by `%` and are followed by one or more of these elements, in this order:
 
 - An optional number followed by a `$` sign that selects which argument index to use for the value. If not specified, arguments will be placed in the same order as the placeholders in the input string.
-- An optional `+` sign that forces to precede the result with a plus or minus sign on numeric values. By default, only the `-` sign is used on negative numbers.
+- An optional `+` sign that forces to precede the result with a plus or minus sign on numeric values. By default, only the `-` sign is used on negative numbers. A space instead of the `+` puts a space before non-negative numbers.
 - An optional padding specifier that says what character to use for padding (if specified). Possible values are `0` or any other character preceded by a `'` (single quote). The default is to pad with *spaces*.
 - An optional `-` sign, that causes `sprintf` to left-align the result of this placeholder. The default is to right-align the result.
 - An optional number, that says how many characters the result should have. If the value to be returned is shorter than this number, the result will be padded. When used with the `j` (JSON) type specifier, the padding length specifies the tab size used for indentation.
@@ -56,13 +58,14 @@ The placeholders in the format string are marked by `%` and are followed by one 
 - An optional `*` (asterisk) modifier that specifies the width and precision of the field.
 - A type specifier that can be any of:
   - `%` — yields a literal `%` character
+  - `a` — yields a float as a hexadecimal number with a binary exponent, like `0x1.8p+1`; `A` writes it in upper-case
   - `b` — yields an integer as a binary number
   - `c` — yields an integer as the character with that ASCII value
   - `d` or `i` — yields an integer as a signed decimal number
-  - `e` — yields a float using scientific notation
+  - `e` — yields a float using scientific notation; `E` writes it in upper-case
   - `u` — yields an integer as an unsigned decimal number
-  - `f` — yields a float as is; see notes on precision above
-  - `g` — yields a float as is; see notes on precision above
+  - `f` — yields a float as is; see notes on precision above; `F` writes `NaN` and infinity in upper-case
+  - `g` — yields a float as is; see notes on precision above; `G` writes it in upper-case
   - `o` — yields an integer as an octal number
   - `s` — yields a string as is
   - `t` — yields `true` or `false`
